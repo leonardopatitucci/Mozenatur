@@ -1,0 +1,7 @@
+{
+  "name": "MozenaTur",
+  "description": "Uma aplicação avançada para motoristas de transporte escolar gerenciarem rotas complexas entre múltiplas escolas, horários e alunos.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
