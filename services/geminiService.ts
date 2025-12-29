@@ -10,8 +10,8 @@ export const optimizeRoute = async (
   day: DayOfWeek,
   userLocation: { latitude: number; longitude: number } | null
 ): Promise<RouteAnalysis> => {
-  // Inicialização da instância logo antes do uso para garantir contexto atualizado
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // A API_KEY é obtida diretamente de process.env.API_KEY injetada pelo ambiente (ex: Vercel)
+  const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
 
   const periodNames = {
     'CEDO': 'Busca matinal (Alunos da Manhã -> Escola)',

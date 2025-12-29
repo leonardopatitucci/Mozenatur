@@ -1,0 +1,18 @@
+# CONFIGURAÇÃO DE CHAVES MOZENATUR
+
+Para o aplicativo funcionar, você precisa configurar a seguinte chave:
+
+1. API_KEY: Obtenha em https://aistudio.google.com/
+
+--- TEMPLATE PARA O ARQUIVO .ENV OU VERCEL ---
+
+API_KEY=insira_sua_chave_aqui
+
+----------------------------------------------
+
+COMO CONFIGURAR NA VERCEL:
+1. Vá ao seu projeto na Vercel.
+2. Clique em 'Settings' > 'Environment Variables'.
+3. Em 'Key' digite: API_KEY
+4. Em 'Value' cole sua chave do Google AI Studio.
+5. Clique em 'Add' e faça um novo Deploy.
