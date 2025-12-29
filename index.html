@@ -4,11 +4,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>MozenaTur - Logística Escolar Inteligente</title>
+    <title>MozenaTur - Gestão de Rotas</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
       body {
         font-family: 'Inter', sans-serif;
       }
@@ -28,22 +28,18 @@
         animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
       }
 
-      .custom-marker-content {
-        width: 32px;
-        height: 32px;
-        border-radius: 9999px;
-        border-width: 4px;
-        border-color: white;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 11px;
-        font-weight: 900;
-        color: white;
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #e2e8f0;
+        border-radius: 10px;
       }
 
-      #map { z-index: 1; }
+      #map { height: 350px; width: 100%; border-radius: 1.5rem; z-index: 1; }
     </style>
   <script type="importmap">
 {
@@ -58,7 +54,7 @@
 }
 </script>
 </head>
-  <body class="bg-slate-100 text-slate-900">
+  <body class="bg-slate-50 text-slate-900">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

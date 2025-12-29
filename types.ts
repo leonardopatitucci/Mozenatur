@@ -3,20 +3,26 @@ export interface School {
   id: string;
   name: string;
   address: string;
-  entryTime: string; // HH:mm
-  exitTime: string;  // HH:mm
+  morningEntry: string; // HH:mm (Manhã)
+  morningExit: string;  // HH:mm (Manhã)
+  afternoonEntry: string; // HH:mm (Tarde)
+  afternoonExit: string;  // HH:mm (Tarde)
   stopDuration: number; // Tempo de parada em minutos
 }
 
 export interface Van {
-  id:string;
+  id: string;
   vanNumber: string;
   model: string;
   plate: string;
   driverName: string;
   capacity: number;
-  startAddress: string; 
+  startAddress: string; // Endereço de início da jornada
 }
+
+export type Shift = 'MANHA' | 'TARDE';
+export type RoutePeriod = 'CEDO' | 'ALMOCO' | 'FINAL_TARDE';
+export type DayOfWeek = 'SEG' | 'TER' | 'QUA' | 'QUI' | 'SEX';
 
 export interface Student {
   id: string;
@@ -24,9 +30,15 @@ export interface Student {
   address: string;
   schoolId: string;
   vanId: string;
-  stopDuration: number; 
-  isAbsent?: boolean; // Se o aluno vai faltar hoje
-  parentPhone?: string;
+  shift: Shift;
+  daysOfWeek: DayOfWeek[]; // Dias em que o aluno utiliza o transporte
+  goesToSchool: boolean;   // Utiliza o transporte na IDA (casa -> escola)
+  returnsFromSchool: boolean; // Utiliza o transporte na VOLTA (escola -> casa)
+  pickupWindowStart: string;
+  pickupWindowEnd: string;
+  stopDuration: number; // Tempo de embarque em minutos
+  isPresent?: boolean;
+  notified?: boolean;
 }
 
 export interface RouteStep {
@@ -34,7 +46,6 @@ export interface RouteStep {
   location: string;
   lat: number;
   lng: number;
-  // FIX: Corrected typo from 'DROFF' to 'DROPOFF' to match usage in App.tsx.
   type: 'PICKUP' | 'DROPOFF' | 'START' | 'END';
   description: string;
   studentIds?: string[]; 
@@ -42,13 +53,9 @@ export interface RouteStep {
   trafficStatus?: 'LIGHT' | 'MODERATE' | 'HEAVY';
   travelTimeFromPrevious?: string;
   distanceFromPrevious?: string;
-  actionUrl?: string; // Link direto para navegação
 }
 
 export interface RouteAnalysis {
   summary: string;
-  totalTime: string;
-  totalDistance: string;
   steps: RouteStep[];
-  groundingUrls?: { title: string; uri: string }[];
 }

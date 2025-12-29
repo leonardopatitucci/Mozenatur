@@ -1,85 +1,117 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { School, Student, RouteAnalysis, Van } from "../types";
-
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+import { School, Student, RouteAnalysis, Van, RoutePeriod, DayOfWeek } from "../types";
 
 export const optimizeRoute = async (
   schools: School[],
-  students: Student[], // A lista já vem filtrada, apenas com alunos presentes
+  students: Student[],
   van: Van,
-  userLocation: string | null
+  period: RoutePeriod,
+  day: DayOfWeek,
+  userLocation: { latitude: number; longitude: number } | null
 ): Promise<RouteAnalysis> => {
+  // Inicialização da instância logo antes do uso para garantir contexto atualizado
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  const periodNames = {
+    'CEDO': 'Busca matinal (Alunos da Manhã -> Escola)',
+    'ALMOCO': 'Misto de Almoço (Alunos da Manhã -> Casa | Alunos da Tarde -> Escola)',
+    'FINAL_TARDE': 'Entrega vespertina (Alunos da Tarde -> Casa)'
+  };
+
+  const dayNames = {
+    'SEG': 'Segunda-feira',
+    'TER': 'Terça-feira',
+    'QUA': 'Quarta-feira',
+    'QUI': 'Quinta-feira',
+    'SEX': 'Sexta-feira'
+  };
+
   const prompt = `
-    Como um engenheiro de logística sênior da MozenaTur, crie o plano de rota de coleta matinal mais eficiente para a VAN ${van.vanNumber} (${van.model}), dirigida por ${van.driverName}.
+    Como um engenheiro de logística sênior especializado em transporte escolar (MozenaTur), gere uma rota otimizada.
     
-    **Parâmetros Críticos:**
-    - PONTO DE PARTIDA DA VAN: ${van.startAddress}
-    - CAPACIDADE MÁXIMA: ${van.capacity} passageiros.
-    - PASSAGEIROS PARA HOJE: ${students.length}.
+    CONTEXTO GEOGRÁFICO E TEMPORAL:
+    - DIA DA SEMANA: ${dayNames[day]}
+    - PERÍODO: ${periodNames[period]}
+    - PONTO DE PARTIDA: ${van.startAddress}
     
-    **Destinos (Escolas):**
-    ${schools.map(s => `- **${s.name}**: Horário de entrada crucial: **${s.entryTime}**. Endereço: ${s.address}. Tempo de desembarque estimado: ${s.stopDuration} min.`).join('\n')}
+    REQUISITO CRÍTICO DE TRÂNSITO:
+    Ao calcular os horários ('time') e tempos de viagem ('travelTimeFromPrevious'), você DEVE considerar o TRÂNSITO MÉDIO ANUAL para este dia da semana e horário nesta região. Use sua base de dados histórica e a ferramenta Google Maps para validar tempos realistas, evitando atrasos comuns em horários de pico escolar.
+
+    REGRAS LOGÍSTICAS:
+    - Roteiro CEDO: Coleta de alunos MANHÃ (Ida: Sim) em casa -> Entrega nas respectivas Escolas (respeitando Horário Entrada Manhã).
+    - Roteiro ALMOÇO: 
+        1. Coleta alunos MANHÃ (Volta: Sim) nas Escolas (respeitando Horário Saída Manhã) -> Entrega em casa.
+        2. Coleta alunos TARDE (Ida: Sim) em casa -> Entrega nas Escolas (respeitando Horário Entrada Tarde).
+        Combine as rotas para minimizar quilometragem.
+    - Roteiro FINAL_TARDE: Coleta alunos TARDE (Volta: Sim) nas Escolas (respeitando Horário Saída Tarde) -> Entrega em casa.
+
+    DADOS DAS ESCOLAS (COM HORÁRIOS POR TURNO):
+    ${schools.map(s => `- ${s.name}: ${s.address} 
+      [MANHÃ: Entrada ${s.morningEntry}, Saída ${s.morningExit}]
+      [TARDE: Entrada ${s.afternoonEntry}, Saída ${s.afternoonExit}]
+      Tempo Parada: ${s.stopDuration}min`).join('\n')}
     
-    **Lista de Coleta (Alunos):**
+    DADOS DOS ALUNOS ATIVOS:
     ${students.map(st => {
       const school = schools.find(s => s.id === st.schoolId);
-      return `- **${st.name}**: Coletar em "${st.address}". Destino: ${school?.name}.`;
+      return `- ${st.name}: ${st.address} (Turno: ${st.shift}, Escola: ${school?.name}, Parada: ${st.stopDuration}min)`;
     }).join('\n')}
 
-    **Diretrizes da Missão:**
-    1.  **PONTUALIDADE É PRIORIDADE MÁXIMA:** Todos os alunos DEVEM chegar em suas respectivas escolas ANTES do horário de entrada. Calcule os tempos de viagem e de coleta para garantir isso.
-    2.  **EFICIÊNCIA DE ROTA:** Agrupe as coletas por proximidade geográfica para minimizar a distância total percorrida e o tempo no trânsito.
-    3.  **LÓGICA DE MÚLTIPLAS ESCOLAS:** Se houver alunos para diferentes escolas, planeje a rota para deixar os alunos da escola com horário mais cedo primeiro.
+    INSTRUÇÕES PARA A FERRAMENTA MAPS:
+    Consulte cada endereço fornecido para obter LATITUDE e LONGITUDE precisas. Não invente coordenadas.
 
-    **Formato de Resposta (OBRIGATÓRIO - APENAS JSON):**
-    Responda com um único objeto JSON com a seguinte estrutura:
+    FORMATO DE RESPOSTA (JSON APENAS):
     {
-      "summary": "Uma análise estratégica concisa da rota, explicando a lógica principal (ex: 'Rota otimizada iniciando pelo bairro X para agrupar 3 coletas, garantindo chegada na Escola Y com 15 minutos de antecedência.')",
-      "totalTime": "Tempo total estimado da rota (ex: '1h 15min')",
-      "totalDistance": "Distância total a ser percorrida (ex: '22.5 km')",
+      "summary": "Explicação da estratégia de trânsito médio anual adotada para esta rota.",
       "steps": [
         {
           "time": "HH:mm",
-          "location": "Endereço completo da parada",
-          "lat": -00.00000,
-          "lng": -00.00000,
+          "location": "endereço exato validado no Maps",
+          "lat": -00.000000,
+          "lng": -00.000000,
           "type": "PICKUP" | "DROPOFF" | "START" | "END",
-          "description": "Descrição clara e objetiva (ex: 'Coletar [Nome do Aluno]' ou 'Desembarque na [Nome da Escola]')",
+          "description": "Ação detalhada",
+          "studentIds": ["id"],
           "trafficStatus": "LIGHT" | "MODERATE" | "HEAVY",
           "travelTimeFromPrevious": "X min",
-          "distanceFromPrevious": "X km"
+          "distanceFromPrevious": "X.X km"
         }
       ]
     }
   `;
 
+  const config: any = {
+    tools: [{ googleMaps: {} }],
+  };
+
+  if (userLocation) {
+    config.toolConfig = {
+      retrievalConfig: {
+        latLng: {
+          latitude: userLocation.latitude,
+          longitude: userLocation.longitude
+        }
+      }
+    };
+  }
+
   try {
-    // FIX: Per Gemini API guidelines, `responseMimeType` is not allowed when using the `googleMaps` tool.
-    // The prompt instructs the model to return JSON, which is parsed within the try-catch block.
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash", 
+      model: "gemini-2.5-flash",
       contents: prompt,
-      config: {
-        tools: [{ googleMaps: {} }],
-      },
+      config: config
     });
 
-    const text = response.text || "{}";
-    const result: RouteAnalysis = JSON.parse(text);
+    const text = response.text || "";
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("Falha na formatação dos dados da rota.");
     
-    // Pós-processamento para adicionar links de navegação
-    if (result.steps) {
-      result.steps = result.steps.map(step => ({
-        ...step,
-        actionUrl: `https://www.google.com/maps/dir/?api=1&destination=${step.lat},${step.lng}`
-      }));
-    }
-    
-    return result;
+    const data = JSON.parse(jsonMatch[0]);
 
+    return data;
   } catch (e) {
-    console.error("Gemini Service Error:", e);
-    throw new Error("A IA não conseguiu gerar uma rota otimizada. Verifique se os endereços estão corretos e completos.");
+    console.error("Erro na geração da rota inteligente:", e);
+    throw new Error("Não foi possível calcular a rota com base no trânsito médio. Verifique os endereços e tente novamente.");
   }
 };
